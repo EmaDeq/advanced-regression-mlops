@@ -1,0 +1,65 @@
+name: Release Candidate - Verified Docker
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install project and development tools
+        run: python -m pip install -e '.[dev]'
+
+      - name: Quality gates
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m pytest -q
+
+      - name: Train candidate model ONCE and record its fingerprint
+        run: |
+          python -m advanced_regression_mlops.train --n-iter 6
+          python -c 'import json; m=json.load(open("reports/metrics.json")); assert m["holdout"]["r2"] >= 0.70, m["holdout"]; print("Holdout metrics:", m["holdout"])'
+          sha256sum artifacts/model.joblib > artifacts/model.sha256
+          sha256sum --check artifacts/model.sha256
+
+      - name: Build image WITHOUT retraining
+        run: docker build --file Dockerfile.release --tag advanced-regression-mlops:release-candidate .
+
+      - name: Smoke test container API
+        run: |
+          docker run --detach --name mlops-release --publish 127.0.0.1:8000:8000 advanced-regression-mlops:release-candidate
+          curl --retry 20 --retry-delay 2 --retry-connrefused --fail --silent --show-error http://127.0.0.1:8000/health > health.json
+          python -c 'import json; d=json.load(open("health.json")); assert d["status"] == "ok", d; print("Health:", d)'
+          curl --fail --silent --show-error http://127.0.0.1:8000/model-info > model-info.json
+          python -c 'import json; d=json.load(open("model-info.json")); assert d["model_version"] == "v0.1.0", d; print("Model:", d["model_version"])'
+          curl --fail --silent --show-error --header 'Content-Type: application/json' --data '{"CRIM":0.00632,"ZN":18.0,"INDUS":2.31,"CHAS":0,"NOX":0.538,"RM":6.575,"AGE":65.2,"DIS":4.09,"RAD":1.0,"TAX":296.0,"PTRATIO":15.3,"LSTAT":4.98}' http://127.0.0.1:8000/predict > prediction.json
+          python -c 'import json; d=json.load(open("prediction.json")); assert isinstance(d.get("predicted_value_thousands_usd"), (float,int)), d; print("Prediction:", d)'
+
+      - name: Preserve candidate model and evaluation (7 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-candidate-${{ github.sha }}
+          path: |
+            artifacts/model.joblib
+            artifacts/model.sha256
+            reports/metrics.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs mlops-release || true
