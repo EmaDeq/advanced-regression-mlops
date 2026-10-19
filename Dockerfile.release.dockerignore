@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+.dvc
+__pycache__
+.pytest_cache
+.ruff_cache
+.vscode
+data
+reports
+mlruns
+mlartifacts
+.env
+*.zip
+artifacts/*
+!artifacts/model.joblib
+!artifacts/model.sha256
