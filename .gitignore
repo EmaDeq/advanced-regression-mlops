@@ -1,0 +1,24 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Do not commit training data, trained pickle artifacts, or experiment histories.
+/data/raw/*
+!/data/raw/.gitkeep
+/artifacts/*
+!/artifacts/.gitkeep
+/mlruns/
+/reports/metrics.json
+/.dvc/cache/

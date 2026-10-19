@@ -1,0 +1,27 @@
+# Optional Blueprint. Creating it is a manual user action; both instances are Free.
+# Both services share Render's workspace-wide free limits; no always-on guarantee.
+services:
+  - type: web
+    name: advanced-regression-mlops-dev
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    envVars:
+      - key: MLOPS_ENV
+        value: dev
+      - key: PORT
+        value: '8000'
+  - type: web
+    name: advanced-regression-mlops-prod
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    envVars:
+      - key: MLOPS_ENV
+        value: prod
+      - key: PORT
+        value: '8000'
