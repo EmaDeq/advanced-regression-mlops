@@ -22,3 +22,7 @@ Thumbs.db
 /mlruns/
 /reports/metrics.json
 /.dvc/cache/
+
+# MLflow local database and artifacts
+/mlflow.db*
+/mlartifacts/
