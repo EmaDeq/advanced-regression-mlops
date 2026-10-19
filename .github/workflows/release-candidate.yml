@@ -42,7 +42,31 @@ jobs:
       - name: Smoke test container API
         run: |
           docker run --detach --name mlops-release --publish 127.0.0.1:8000:8000 advanced-regression-mlops:release-candidate
-          curl --retry 20 --retry-delay 2 --retry-connrefused --fail --silent --show-error http://127.0.0.1:8000/health > health.json
+          echo "Waiting for FastAPI to become ready..."
+          healthy=0
+
+          for attempt in $(seq 1 40); do
+            if curl --max-time 4 --fail --silent http://127.0.0.1:8000/health -o health.json; then
+              healthy=1
+              echo "API ready on attempt $attempt"
+              break
+            fi
+
+            if [ "$(docker inspect --format '{{.State.Running}}' mlops-release)" != "true" ]; then
+              echo "Container exited before becoming ready"
+              docker logs mlops-release
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          if [ "$healthy" -ne 1 ]; then
+            echo "API did not become ready"
+            docker ps -a
+            docker logs mlops-release
+            exit 1
+          fi
           python -c 'import json; d=json.load(open("health.json")); assert d["status"] == "ok", d; print("Health:", d)'
           curl --fail --silent --show-error http://127.0.0.1:8000/model-info > model-info.json
           python -c 'import json; d=json.load(open("model-info.json")); assert d["model_version"] == "v0.1.0", d; print("Model:", d["model_version"])'
