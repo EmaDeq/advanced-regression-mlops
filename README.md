@@ -142,3 +142,6 @@ advanced-regression-mlops/
 ```
 
 License: MIT **for code only**. Dataset and third-party package licenses are independent.
+
+## CI Status
+![CI](https://github.com/EmaDeq/advanced-regression-mlops/actions/workflows/ci.yml/badge.svg)
