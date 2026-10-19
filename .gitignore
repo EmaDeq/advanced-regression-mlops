@@ -15,9 +15,7 @@ dist/
 .DS_Store
 Thumbs.db
 # Do not commit training data, trained pickle artifacts, or experiment histories.
-/data/raw/*
 !/data/raw/.gitkeep
-/artifacts/*
 !/artifacts/.gitkeep
 /mlruns/
 /reports/metrics.json
@@ -26,7 +24,7 @@ Thumbs.db
 # MLflow local database and artifacts
 /mlflow.db*
 /mlartifacts/
-!/data/raw/*.dvc
-!/data/raw/.gitignore
-!/artifacts/*.dvc
-!/artifacts/.gitignore
+
+# DVC-managed files
+/data/raw/*.csv
+/artifacts/*.joblib
