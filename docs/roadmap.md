@@ -1,4 +1,4 @@
-# Roadmap â€” verified state on 23 October 2026
+# Roadmap — verified state on 23 October 2026
 
 ## Completed and demonstrated
 
@@ -15,17 +15,18 @@
 - [x] End-to-end unpublished provenance rehearsal (run 39937525166)
 - [x] Privacy-conscious structured HTTP logs in source (PR #19)
 
-## Completion activities
+## Final release completed (23 October 2026)
 
-- [ ] Final release PR: quality gates, dependency constraints, image acceptance
-      tests, manifest helper and final runbook
+- [x] Final quality-gate, training/serving parity and container acceptance changes (PR #21)
+- [x] Final image C built and published (run 39944257313)
+- [x] DEV deployed and verified (run 39944759927; PR #22)
+- [x] PROD promoted after protected approval (run 39947187429; PR #23)
+- [x] Identical immutable SHA-256 digest recorded in both manifests
+- [x] Final live acceptance passed, including API security headers
+- [x] JSON `http_request` logs observed in Render DEV
+- [x] Both Render Free services suspended when not in use
 
-- [x] Merge basic input hardening and accurate documentation (PR #20)
-- [ ] Build/publish one new approved image that includes monitoring, provenance
-      and input-hardening changes; test DEV; optionally promote PROD under
-      protected manual review and update manifests afterwards
-- [ ] Examine Render logs for JSON request events *after* the new image is live
-- [ ] Review cost limits and suspend the existing Free services when idle
+Full evidence: [final-release-evidence.md](final-release-evidence.md).
 
 ## Optional further work (not required for MLOps portfolio v1)
 
