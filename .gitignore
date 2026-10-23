@@ -28,3 +28,7 @@ Thumbs.db
 # DVC-managed files
 /data/raw/*.csv
 /artifacts/*.joblib
+
+# Generated CI release provenance and MLflow database
+/reports/release-provenance.json
+/mlflow-ci.db*

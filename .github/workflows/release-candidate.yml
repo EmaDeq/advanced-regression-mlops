@@ -28,7 +28,7 @@ jobs:
           cache: pip
 
       - name: Install project and development tools
-        run: python -m pip install -e '.[dev]'
+        run: python -m pip install -e '.[dev,tracking]'
 
       - name: Quality gates
         run: |
@@ -42,6 +42,9 @@ jobs:
           python -c 'import json; m=json.load(open("reports/metrics.json")); assert m["holdout"]["r2"] >= 0.70, m["holdout"]; print("Holdout metrics:", m["holdout"])'
           sha256sum artifacts/model.joblib > artifacts/model.sha256
           sha256sum --check artifacts/model.sha256
+
+      - name: Record verifiable CI release lineage in MLflow
+        run: python -m advanced_regression_mlops.release_provenance
 
       - name: Build image WITHOUT retraining
         run: docker build --file Dockerfile.release --tag advanced-regression-mlops:release-candidate .
@@ -88,6 +91,9 @@ jobs:
             artifacts/model.joblib
             artifacts/model.sha256
             reports/metrics.json
+            reports/release-provenance.json
+            mlflow-ci.db
+            mlruns/
           if-no-files-found: error
           retention-days: 7
 

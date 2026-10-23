@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir .
 # The model is created and checksummed BEFORE Docker builds this image.
 # Unlike the starter Dockerfile, this image does not retrain the model.
 COPY artifacts/model.joblib artifacts/model.sha256 ./artifacts/
+COPY reports/release-provenance.json ./artifacts/release-provenance.json
 RUN sha256sum --check artifacts/model.sha256 \
     && python -c "import joblib; joblib.load('artifacts/model.joblib')"
 
