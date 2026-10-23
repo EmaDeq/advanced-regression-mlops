@@ -1,53 +1,63 @@
-# PROD rollback runbook (educational environment)
+# PROD rollback runbook (educational Render Free deployment)
 
-## What is currently verified
+## Actually tested on 23 October 2026
 
-The initial PROD release is recorded in `releases/prod.json` and archived as
-`releases/history/prod-20261022-initial.json`. The initial promotion workflow has
-passed with the immutable GHCR image digest in that file.
+- Approved original image A was promoted with PROD run `39771335358`.
+- Different image B was promoted with PROD run `39921648054`.
+- Real B -> A rollback **succeeded** with protected workflow run
+  **`39933134876`**, including prior-run verification, live Render digest
+  checks, and `/health`, `/model-info`, `/predict` smoke tests.
+- Original A and superseded B manifests are archived in
+  `releases/history/prod-20261022-initial.json` and
+  `releases/history/prod-20261023-second.json` respectively.
+- The current Git-tracked `releases/prod.json` records A and the successful
+  rollback run ID; `releases/dev.json` still records B.
 
-**Important:** until a second, different approved image has been promoted into
-PROD, this project has **not** demonstrated a genuine rollback. The rollback
-workflow intentionally refuses to deploy an image already recorded as current.
+## Normal controlled release
 
-## For a new approved PROD release
+1. Merge code to protected `main` with successful CI.
+2. Manually run `release-candidate.yml` with `publish_image=true`. Verify
+   DVC dataset and model checksums, MLflow provenance, tested Docker image
+   and GHCR SHA-256 reference.
+3. Resume existing DEV if suspended. Manually run `deploy-dev.yml`, passing
+   the successful published release run ID. The digest artifact expires after
+   seven days; retain its immutable digest in `releases/dev.json` through a PR.
+4. Check DEV success, the reported exact live image and three API smoke tests.
+5. Update `releases/dev.json` via PR with image and verified run IDs.
+6. Resume existing PROD if suspended. Run `promote-prod.yml` with
+   `confirmation=PROMOTE` and **manually approve** the protected `prod`
+   environment. The workflow verifies DEV/release runs, deploys exactly the
+   approved digest and smoke-tests PROD.
+7. Archive superseded `releases/prod.json` under `releases/history/` and
+   commit the new PROD image and workflow run ID via PR. Do not skip this.
 
-1. Build a new candidate in GitHub Actions, publish its exact smoke-tested GHCR image.
-2. Deploy that digest to DEV, verify `/health`, `/model-info`, and `/predict`.
-3. Update `releases/dev.json` via a reviewed PR to point to the verified new digest
-   and successful release/DEV run IDs.
-4. Use the protected `promote-prod.yml` workflow and manually approve `prod`.
-5. Archive the prior `releases/prod.json` in `releases/history/`, then update
-   `releases/prod.json` via PR with the new digest and successful PROD run ID.
+## Roll back to an older approved image
 
-## To roll back an unsuccessful new release
+1. Confirm older, DIFFERENT approved PROD image has an archived manifest and
+   still exists on public GHCR. The current `releases/prod.json` must match
+   the actual live Render deployment. If not, stop and reconcile first.
+2. Trigger `rollback-prod.yml` on `main` with a path matching
+   `releases/history/prod-*.json` and `confirmation=ROLLBACK`.
+3. Manually approve the protected GitHub `prod` environment.
+4. Workflow checks prior successful release/DEV/PROD runs, live image digest,
+   redeploys the archived digest and smoke-tests the API. If any safeguard
+   fails, **stop**: do not rerun blindly or change Git to conceal drift.
+5. After success archive the superseded PROD manifest, update
+   `releases/prod.json` with the restored digest and **new rollback run ID**,
+   then merge through PR/CI.
 
-1. Confirm a **different**, older, approved PROD image exists in
-   `releases/history/` and remains available publicly in GHCR.
-2. Confirm `releases/prod.json` describes the image currently live on Render.
-3. Manually run `Rollback PROD - Approved Image` from `main`, providing the
-   archived manifest path and the explicit confirmation `ROLLBACK`.
-4. Approve the protected `prod` environment in GitHub Actions. This is a
-   deliberate operation, not an automatic background deployment.
-5. The workflow validates the historic release/DEV/PROD GitHub runs, compares
-   the live Render digest against `releases/prod.json`, deploys the older digest,
-   waits for Render to report it live, and runs three live API smoke tests.
-6. After a successful rollback, archive the superseded `releases/prod.json` and
-   update `releases/prod.json` to record the restored digest and successful
-   rollback run ID. Without this, the release manifest will be stale.
+## Safety and costs
 
-## Safety and cost
-
-No workflow creates or upgrades a Render service. Keep the service set to Free;
-DEV and PROD share the workspace's free instance-hours budget. This is an
-educational environment, not an always-on commercially supported PROD system.
-
-The archive is a historical record, **not** automatic proof of live state.
-The workflow refuses to change PROD if the most recent live Render image differs
-from the Git-tracked current PROD image. Using digest-based redeployment avoids
-relying on Render's limited historic build retention, but the GHCR image must
-remain available.
-
-Retire the obsolete `deploy.yml` deployment-hook workflow, which could bypass
-this controlled digest promotion. Do not manually deploy a Git-based rebuild to
-PROD.
+- Git manifests are deployment records, not substitutes for checking Render.
+- Rollback always requires human authorization and does not bypass `prod`
+  environment gates. PROD/DEV use existing Free services; no workflow creates
+  a new Render service or upgrades a plan.
+- Both services share workspace Free instance-hour limits; suspend when idle.
+  No 24/7 availability is guaranteed. Do not add billing details if avoiding
+  charges is paramount.
+- Do not use legacy `Dockerfile`, `render.yaml` Blueprint rebuilds, or removed
+  webhook deployment for image-digest promotion. Retain approved GHCR images
+  and release records for as long as you need reliable rollback.
+- Older A/B images predate the later MLflow CI lineage and structured logging
+  changes. Updating code on GitHub does NOT update live services until a new
+  tested image is explicitly deployed.

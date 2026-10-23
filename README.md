@@ -1,147 +1,128 @@
 # Advanced Regression MLOps
 
-A **zero-additional-cost** personal-laptop MLOps portfolio starter for Boston Housing
-regression. Cookiecutter Data Science-inspired structure; Python 3.12, scikit-learn,
-FastAPI, pytest, Docker, GitHub Actions, and optional Render free-tier DEV/PROD services.
+[![CI](https://github.com/EmaDeq/advanced-regression-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/EmaDeq/advanced-regression-mlops/actions/workflows/ci.yml)
 
-> **Ethics:** Boston Housing is a historically problematic dataset. The racially
-> constructed `B` feature is deliberately **excluded** from model training and API input.
-> Other variables can still act as proxies. This is an *educational benchmark only*,
-> not a system for real-world housing decisions. See `docs/data_ethics.md`.
+An educational, zero-*additional*-cost MLOps portfolio project: Python 3.12,
+scikit-learn, FastAPI, GitHub Actions, immutable Docker images on GHCR, optional
+Render Free DEV/PROD, local DVC and MLflow.
 
-## Requirements (personal laptop)
+> **Ethics:** Boston Housing / OpenML 531 is a historically problematic, tiny
+> benchmark. The racially constructed `B` feature is excluded. Other features
+> may still be proxies. **Never use the model for actual housing, financial,
+> policy or other consequential decisions.** See [data ethics](docs/data_ethics.md).
 
-- Windows PowerShell 5.1+; Windows 10/11.
-- Python **3.12** recommended; Git; Internet for installing packages and fetching OpenML ID 531.
-- Docker Desktop **optional** (free for personal use under Docker's license).
-- GitHub CLI `gh` **optional** (for repository creation via the terminal).
+## Verified milestones (23 October 2026)
 
-No paid products are installed by this project. `setup.ps1` never signs up for a service
-or initiates cloud deployment. Python packages download only from pip and the dataset
-from OpenML. Always inspect scripts before running them.
+- Tests, Ruff and PR checks protect `main`.
+- A manually triggered candidate workflow trains a model **once**, verifies the
+  DVC-tracked CSV checksum and model SHA-256, logs to a **temporary CI-local
+  MLflow** store, records JSON provenance, and smoke-tests the Docker image.
+- Publishing to GHCR is **opt-in** (`publish_image=true`). The published image
+  is the same image that was smoke-tested, addressed by immutable SHA-256 digest.
+- DEV uses an existing Render Free service; PROD promotion requires manual
+  approval of the protected `prod` GitHub environment.
+- A real PROD rollback from image B to image A succeeded (GitHub run
+  `39933134876`). Both releases are preserved in `releases/history/`.
+- The API now has privacy-conscious JSON request logs **in source code**. The
+  currently deployed images predate that change, so the new logs are **not yet
+  active on Render** until a new approved release is deployed.
 
-## Quick start: Windows PowerShell
+### Git-tracked deployment state
 
-From the folder containing the downloaded ZIP:
+| Environment | Recorded image | Notes |
+| --- | --- | --- |
+| DEV | B: `sha256:3a30a679c995966af9db43b90040a1c7d502295736ae5f433e3cd6110c558ea4` | Second tested image |
+| PROD | A: `sha256:863eebb1e8100a4f1397ace09f53712301944904984205634d58850da9dd9a4f` | Restored by verified rollback |
+
+The source of truth is `releases/dev.json` and `releases/prod.json`, **not** this
+static table. Manifests record the approved image; they are not a live health
+check. Render services may be suspended to conserve free hours.
+
+## Local setup on Windows
+
+Requirements: Git, Python 3.12, PowerShell and Internet for dependencies/OpenML.
+Docker Desktop is optional for local image builds; Docker licensing depends on
+how it is used.
 
 ```powershell
-New-Item -ItemType Directory -Force -Path C:\mio | Out-Null
-Expand-Archive -LiteralPath .\advanced-regression-mlops-starter.zip -DestinationPath C:\mio -Force
-Set-Location C:\mio\advanced-regression-mlops
+git clone https://github.com/EmaDeq/advanced-regression-mlops.git
+cd advanced-regression-mlops
 powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1
-```
 
-`setup.ps1` creates `.venv`, installs project + test dependencies, runs tests, downloads
-Boston from OpenML, trains an advanced tuned HistGradientBoostingRegressor, and creates
-`artifacts/model.joblib`. It leaves a local Git repo on branch `main` if Git exists.
-The OpenML fetch requires Internet **on first run**. To set up packages without training,
-use `powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -SkipTraining`.
-
-### Run the API (first PowerShell terminal)
-
-```powershell
-.\scripts\start-api.ps1
-```
-
-Open `http://127.0.0.1:8000/docs` for interactive prediction requests. In a **second**
-PowerShell terminal, in the project folder:
-
-```powershell
-.\scripts\smoke-test.ps1
-```
-
-Or manually:
-
-```powershell
-.\.venv\Scripts\python.exe -m advanced_regression_mlops.train --n-iter 8
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m ruff format --check .
 ```
 
-If script execution is blocked, use `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-api.ps1` instead.
+To run a local API using the locally trusted model, run
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-api.ps1`
+then open `http://127.0.0.1:8000/docs`. In a second terminal run
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1`.
+`/health`, `/model-info`, and `/predict` serve an educational model with twelve
+numeric features; the historical MEDV target is expressed in thousands of
+historical USD.
 
-### GitHub setup (you control when to publish)
+## Manual release process (no automatic PROD deployments)
 
-```powershell
-git status
-git add .
-git commit -m "feat: bootstrap advanced regression MLOps"
-# Install optional GitHub CLI: winget install --id GitHub.cli -e
-# Log in interactively: gh auth login
-# The following deliberately creates a PUBLIC repository for free public Actions:
-gh repo create EmaDeq/advanced-regression-mlops --public --source . --remote origin --push
-```
+1. CI gates each PR; merge into protected `main` after checks.
+2. Manually trigger `.github/workflows/release-candidate.yml` with
+   `publish_image=true` only when you intend to retain a published GHCR image.
+   Use `false` for a full, **unpublished**, provenance-checking rehearsal.
+3. After a successful published release, manually trigger `deploy-dev.yml` with
+   that **release run ID** (digest artifact lasts 7 days). Verify the DEV job.
+4. Update `releases/dev.json` to the verified image digest and the successful
+   release and DEV deployment run IDs, via PR and CI.
+5. Resume existing PROD if suspended. Trigger `promote-prod.yml` with
+   `confirmation=PROMOTE`; manually approve the protected `prod` environment.
+   The workflow deploys the **same DEV-tested digest** and smoke-tests PROD.
+6. Archive the previous PROD manifest and update `releases/prod.json` with the
+   successful promotion run ID via PR.
+7. For rollback, use `.github/workflows/rollback-prod.yml` with an archived
+   manifest and explicit `confirmation=ROLLBACK`; approve `prod`; inspect the
+   checked digest and three live API checks; update the manifest afterward.
 
-Change `--public` to `--private` if desired, but private GitHub Actions minutes have
-account-specific quotas. Do **not** push secrets or local model/data artifacts.
+Full procedures and safety checks: [rollback runbook](docs/rollback.md).
+No workflow here creates a new Render service or upgrades one to a paid plan.
+The existing optional `render.yaml` is a **starter Blueprint**, not the source
+of truth for current image-based deployments: do not reapply it to running
+services. The old webhook-based `.github/workflows/deploy.yml` was removed.
+`Dockerfile` and `docker-build.yml` remain legacy educational examples; the
+verified release path uses **`Dockerfile.release`** exclusively.
 
-### Local Docker (optional)
+## Model, data and experiment lineage
 
-```powershell
-docker build -t advanced-regression-mlops:local .
-docker run --rm -p 8000:8000 advanced-regression-mlops:local
-```
+- OpenML dataset 531, 506 rows, 12 usable features, with `B` excluded.
+- 80/20 holdout split, seeded CV tuning of HistGradientBoostingRegressor;
+  DummyRegressor and Ridge baselines.
+- Successfully verified unpublished lineage rehearsal: GitHub run
+  `39937525166`, holdout R2 `0.8756`, MAE `2.1019`, RMSE `3.02`.
+- DVC dataset snapshot is checked byte-for-byte during a release; CI downloads
+  OpenML data and uses canonical CRLF line endings to match the local DVC pointer.
+- MLflow run ID, Git SHA, dataset hash, model SHA-256, hyperparameters,
+  metrics and package versions are stored in `reports/release-provenance.json`
+  during the release and embedded in **new release images**. They are not present
+  in older A/B images built before this improvement.
+- CI MLflow SQLite database and full artifacts are retained **seven days**.
+  No always-on MLflow tracking server is configured. The separate local DVC
+  model pointer does not automatically refer to each CI-trained model.
 
-The starter Dockerfile downloads OpenML and **trains at build time**, so the image contains
-its own model. This is convenient for a starter but **not yet production-grade artifact
-promotion**. A future milestone will build one versioned model and promote an identical,
-tested immutable image from DEV to PROD. No paid cloud resources are created.
+More: [release lineage](docs/release-lineage.md) and
+[architecture](docs/architecture.md).
 
-### CI / CD and Render (optional; not enabled by default)
+## Monitoring, security and cost
 
-- `.github/workflows/ci.yml`: lint, formatting, and offline unit tests on push/PR.
-- `.github/workflows/docker-build.yml`: manually trigger a full Docker image build.
-- `render.yaml`: two explicitly **free-plan** services for `dev` and `prod`, with
-  auto deploy **off**. Review the Render dashboard carefully **before** accepting a Blueprint.
-- `.github/workflows/deploy.yml`: workflow manually triggered via **Actions → Deploy (opt-in)**.
-  It runs tests, then POSTs the relevant Render deploy hook if configured. For each
-  GitHub *environment* (`dev` / `prod`) create an environment secret named
-  `RENDER_DEPLOY_HOOK_URL` copied from that service's Render Settings. Never commit hooks.
-- Do **not** add a payment method to Render if zero financial risk is critical.
-  Free services have limits, sleep when idle, and can be suspended. Two services share
-  the workspace's free instance-hours budget. This is for learning, not reliable 24/7 hosting.
-- Production-grade gating: set repository branch policies and manual approval rules where
-  your GitHub plan supports them; restrict who can trigger production workflows.
+The API source logs a JSON event with request ID, method, fixed route name,
+HTTP status and latency, excluding request bodies, feature values and predictions.
+No continuous synthetic checks are scheduled on Render Free. The API is an
+**unauthenticated public demo**, with **no application rate limiter, automated
+alerting or drift detection**. This is not a production security guarantee.
 
-**Warning:** The starter deploy hook tells Render to rebuild its connected Git branch.
-It does not yet guarantee promotion of the exact image verified in DEV. That is on the
-roadmap; don't use the current setup for consequential production systems.
+See [monitoring](docs/monitoring.md), [security](docs/security.md) and
+[roadmap](docs/roadmap.md). Never commit secrets, local MLflow databases or
+training data; public GitHub Actions and GHCR have their own applicable limits.
+Keep Render on Free, check the dashboard for usage, and **Suspend** DEV/PROD
+when not needed to avoid consuming instance-hours. Do not add a payment method
+if avoiding charges is paramount.
 
-## Model design
-
-- OpenML dataset ID `531`, canonical 506-row Boston dataset; 12 input features (omit `B`).
-- Train/test split **before** hyperparameter search (`random_state=42`).
-- Mean-predicting DummyRegressor and scaled Ridge baselines.
-- `Pipeline(SimpleImputer, HistGradientBoostingRegressor)`, RandomizedSearchCV, 5-fold CV.
-- MAE, RMSE, R² on held-out test partition; metadata and artifacts saved locally.
-- Housing target `MEDV` is **$1,000 USD units** from the historic dataset, not current values.
-- Deterministic random seeds; small `--n-iter 6` during quick initial setup.
-
-## Repository layout
-
-```text
-advanced-regression-mlops/
-├── .github/workflows/     # CI, manual image build, opt-in CD
-├── data/raw/              # downloaded once, never committed
-├── artifacts/             # trained model, never committed
-├── docs/                  # cloud deployment, ethics, architecture, roadmap
-├── notebooks/             # optional exploratory notebooks
-├── reports/               # generated metrics, figures
-├── scripts/               # PowerShell commands and API smoke test
-├── src/advanced_regression_mlops/
-│   ├── api.py             # FastAPI endpoints
-│   ├── data.py            # OpenML + schema verification
-│   ├── modeling.py        # sklearn pipelines
-│   └── train.py           # split, CV search, evaluation, serialization
-├── tests/                 # fast offline unit and API tests
-├── Dockerfile
-├── render.yaml
-├── pyproject.toml
-└── setup.ps1
-```
-
-License: MIT **for code only**. Dataset and third-party package licenses are independent.
-
-## CI Status
-![CI](https://github.com/EmaDeq/advanced-regression-mlops/actions/workflows/ci.yml/badge.svg)
+License: MIT for repository code only. Third-party components and data have
+independent terms.

@@ -48,6 +48,8 @@ async def log_request_summary(request: Request, call_next):
         response = await call_next(request)
         status_code = response.status_code
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "no-store"
         return response
     finally:
         request_logger.info(
@@ -69,7 +71,7 @@ async def log_request_summary(request: Request, call_next):
 class HousingFeatures(BaseModel):
     """12 canonical numerical predictors; racially constructed B is excluded."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     CRIM: float = Field(ge=0)
     ZN: float = Field(ge=0, le=100)
     INDUS: float = Field(ge=0)
