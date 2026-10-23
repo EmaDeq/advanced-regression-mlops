@@ -39,7 +39,7 @@ def download_dataset(destination: Path = DATA_PATH) -> pd.DataFrame:
         raise ValueError("OpenML returned no DataFrame")
     clean = validate_frame(frame)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    clean.to_csv(destination, index=False)
+    clean.to_csv(destination, index=False, lineterminator="\r\n")
     print(f"Saved {len(clean)} observations to {destination}")
     return clean
 
