@@ -1,8 +1,9 @@
 # Final MLOps release acceptance (educational demonstration)
 
-This is a release checklist, not a claim of commercial production readiness.
-Only **one additional new published image** is planned after PR #20: the image
-containing monitoring, API safety, MLflow/DVC provenance and these final gates.
+This is the archived release acceptance procedure, not a claim of commercial
+production readiness. **All release acceptance steps below were completed** on
+23 October 2026 with final image C. See [recorded evidence](final-release-evidence.md).
+The procedure remains as a checklist for future explicitly approved changes.
 
 ## Source acceptance
 
