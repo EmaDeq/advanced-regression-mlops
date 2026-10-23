@@ -1,0 +1,10 @@
+{
+    "environment":  "prod",
+    "image":  "ghcr.io/emadeq/advanced-regression-mlops@sha256:3a30a679c995966af9db43b90040a1c7d502295736ae5f433e3cd6110c558ea4",
+    "release_run_id":  39800950091,
+    "dev_deployment_run_id":  39919541406,
+    "prod_deployment_run_id":  39921648054,
+    "model_version":  "v0.1.0",
+    "api_url":  "https://advanced-regression-mlops-prod.onrender.com",
+    "recorded_at_utc":  "2026-10-23T08:09:26.5436767Z"
+}
