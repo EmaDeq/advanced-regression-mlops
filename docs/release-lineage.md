@@ -36,3 +36,15 @@ model checksum, metrics, and MLflow database. Do not deploy if that job fails.
 
 The release workflow still uses existing GitHub CI and GHCR; no new Render service,
 paid account, remote database or API key is required.
+
+
+## Final release: training-serving dependency parity
+
+The release captures `artifacts/runtime-constraints.txt` from the **same runner**
+that trained the model (`pip freeze --exclude-editable`). The Dockerfile uses the
+constraints during `pip install .` and verifies `pip check`. Smoke tests compare
+the dependency constraints and provenance JSON byte-for-byte between runner and
+container, and require matching scikit-learn, pandas and numpy versions. The
+model is trained **once**; no retraining occurs in Docker. This improves
+repeatability without requiring a paid dependency registry or shared MLflow.
+The image also records its originating Git commit as an OCI revision label.

@@ -17,7 +17,10 @@
 
 ## Completion activities
 
-- [ ] Merge basic input hardening and accurate documentation (this PR)
+- [ ] Final release PR: quality gates, dependency constraints, image acceptance
+      tests, manifest helper and final runbook
+
+- [x] Merge basic input hardening and accurate documentation (PR #20)
 - [ ] Build/publish one new approved image that includes monitoring, provenance
       and input-hardening changes; test DEV; optionally promote PROD under
       protected manual review and update manifests afterwards

@@ -16,3 +16,4 @@ mlartifacts
 artifacts/*
 !artifacts/model.joblib
 !artifacts/model.sha256
+!artifacts/runtime-constraints.txt
