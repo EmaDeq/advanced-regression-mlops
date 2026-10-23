@@ -1,4 +1,4 @@
-# Architecture â€” verified release flow (23 October 2026)
+# Architecture — verified release flow (23 October 2026)
 
 ```text
 LOCAL WINDOWS LAPTOP
@@ -33,14 +33,14 @@ GITHUB (protected main, required CI on PR)
 
 ### Verified and deliberately limited
 
-- Historical original image A was restored after promotion of image B.
+- Historical original image A was restored after promotion of image B; the final image C was later promoted to both DEV and PROD.
   Successful PROD rollback run: `39933134876`; both historical records live
   under `releases/history/`.
 - CI provenance demo run `39937525166` completed successfully with
   `publish_image=false`. This was a **build-only** rehearsal, not a DEV or PROD
   deployment and not a persisted GHCR image.
-- Source now contains privacy-conscious structured request logging (PR #19),
-  but current A/B Render images do **not** contain those newer changes.
+- Source contains privacy-conscious structured request logging (PR #19),
+  and the final image C deployed to both DEV and PROD **does** contain those changes. Render DEV JSON logs were inspected.
 - The release MLflow SQLite backend and full candidate artifacts live on an
   ephemeral GitHub runner and in GitHub artifacts for seven days. The metadata
   embedded in newly published GHCR images can outlive that period, provided
