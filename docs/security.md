@@ -30,8 +30,8 @@
 - Secret `RENDER_API_KEY` and variable `RENDER_SERVICE_ID` are configured in
   GitHub environments, not committed. Keep credentials private; rotate any
   leaked keys. Never put secrets in request bodies or query parameters.
-- New source-code safeguards do not protect old deployed A/B images until a
-  new approved release has been deployed and verified through DEV/PROD.
+- The final approved image C includes these safeguards and was verified in DEV
+  and PROD. Historical A/B images remain archived as prior releases.
 - Local and CI MLflow are not centralized durable audit systems. GitHub
   artifact retention is seven days for release candidates.
 

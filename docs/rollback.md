@@ -10,8 +10,9 @@
 - Original A and superseded B manifests are archived in
   `releases/history/prod-20261022-initial.json` and
   `releases/history/prod-20261023-second.json` respectively.
-- The current Git-tracked `releases/prod.json` records A and the successful
-  rollback run ID; `releases/dev.json` still records B.
+- The historic B → A rollback evidence remains preserved. **Current** Git-tracked
+  `releases/prod.json` and `releases/dev.json` both record the final image C,
+  promoted and verified on 23 October 2026.
 
 ## Normal controlled release
 
@@ -58,6 +59,7 @@
 - Do not use legacy `Dockerfile`, `render.yaml` Blueprint rebuilds, or removed
   webhook deployment for image-digest promotion. Retain approved GHCR images
   and release records for as long as you need reliable rollback.
-- Older A/B images predate the later MLflow CI lineage and structured logging
-  changes. Updating code on GitHub does NOT update live services until a new
-  tested image is explicitly deployed.
+- Older A/B images predate later MLflow CI lineage and structured logging
+  changes. Final image C includes those changes and was deployed and verified.
+  Future code changes on GitHub do NOT update live services without a new
+  approved deployment.
