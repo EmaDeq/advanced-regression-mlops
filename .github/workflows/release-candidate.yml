@@ -36,18 +36,25 @@ jobs:
           python -m ruff format --check .
           python -m pytest -q
 
+      - name: Fetch training dataset and verify DVC fingerprint before training
+        run: |
+          python -m advanced_regression_mlops.data
+          python -c 'from advanced_regression_mlops.config import DATA_PATH; from advanced_regression_mlops.release_provenance import DVC_DATA_PATH, verified_dataset; print(verified_dataset(DATA_PATH, DVC_DATA_PATH))'
+
       - name: Train candidate model ONCE and record its fingerprint
         run: |
           python -m advanced_regression_mlops.train --n-iter 6
-          python -c 'import json; m=json.load(open("reports/metrics.json")); assert m["holdout"]["r2"] >= 0.70, m["holdout"]; print("Holdout metrics:", m["holdout"])'
+          python -m advanced_regression_mlops.release_quality
           sha256sum artifacts/model.joblib > artifacts/model.sha256
           sha256sum --check artifacts/model.sha256
+          python -m pip freeze --exclude-editable > artifacts/runtime-constraints.txt
+          test -s artifacts/runtime-constraints.txt
 
       - name: Record verifiable CI release lineage in MLflow
         run: python -m advanced_regression_mlops.release_provenance
 
       - name: Build image WITHOUT retraining
-        run: docker build --file Dockerfile.release --tag advanced-regression-mlops:release-candidate .
+        run: docker build --file Dockerfile.release --build-arg SOURCE_COMMIT="$GITHUB_SHA" --tag advanced-regression-mlops:release-candidate .
 
       - name: Smoke test container API
         run: |
@@ -82,6 +89,20 @@ jobs:
           python -c 'import json; d=json.load(open("model-info.json")); assert d["model_version"] == "v0.1.0", d; print("Model:", d["model_version"])'
           curl --fail --silent --show-error --header 'Content-Type: application/json' --data '{"CRIM":0.00632,"ZN":18.0,"INDUS":2.31,"CHAS":0,"NOX":0.538,"RM":6.575,"AGE":65.2,"DIS":4.09,"RAD":1.0,"TAX":296.0,"PTRATIO":15.3,"LSTAT":4.98}' http://127.0.0.1:8000/predict > prediction.json
           python -c 'import json; d=json.load(open("prediction.json")); assert isinstance(d.get("predicted_value_thousands_usd"), (float,int)), d; print("Prediction:", d)'
+          # Verify that the tested image contains the exact CI provenance and constraints.
+          docker cp mlops-release:/app/artifacts/release-provenance.json image-provenance.json
+          docker cp mlops-release:/app/artifacts/runtime-constraints.txt image-constraints.txt
+          cmp reports/release-provenance.json image-provenance.json
+          cmp artifacts/runtime-constraints.txt image-constraints.txt
+          test "$(docker image inspect advanced-regression-mlops:release-candidate --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$GITHUB_SHA"
+          docker exec mlops-release python -c 'import json; import importlib.metadata as m; r=json.load(open("/app/artifacts/release-provenance.json")); assert all(m.version(p) == r["runtime_versions"][p] for p in ("scikit-learn", "pandas", "numpy")); print("Training and serving dependency versions match")'
+          # Security headers and structured logs must work INSIDE the image.
+          curl --fail --silent --show-error --dump-header smoke-headers.txt --output /dev/null http://127.0.0.1:8000/health
+          grep -qi '^x-content-type-options: nosniff' smoke-headers.txt
+          grep -qi '^cache-control: no-store' smoke-headers.txt
+          grep -qi '^x-request-id:' smoke-headers.txt
+          docker logs mlops-release 2>&1 | grep -F '"event":"http_request"'
+          echo 'Final image acceptance passed: provenance, versions, headers and logs.'
 
       - name: Preserve candidate model and evaluation (7 days)
         uses: actions/upload-artifact@v6
@@ -90,6 +111,7 @@ jobs:
           path: |
             artifacts/model.joblib
             artifacts/model.sha256
+            artifacts/runtime-constraints.txt
             reports/metrics.json
             reports/release-provenance.json
             mlflow-ci.db

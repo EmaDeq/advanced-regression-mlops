@@ -124,5 +124,15 @@ Keep Render on Free, check the dashboard for usage, and **Suspend** DEV/PROD
 when not needed to avoid consuming instance-hours. Do not add a payment method
 if avoiding charges is paramount.
 
+## Final acceptance and operations
+
+The last planned MLOps release adds stricter holdout/baseline quality gates,
+version-consistent training/serving dependencies, and Docker smoke tests that
+check provenance, API security headers and structured logging. The final
+published image must still pass DEV, protected PROD and manifest-reconciliation
+checks before MLOps closure is claimed. See the
+[final release checklist](docs/final-release-checklist.md) and the
+[manifest recorder](scripts/record-verified-release.ps1).
+
 License: MIT for repository code only. Third-party components and data have
 independent terms.
